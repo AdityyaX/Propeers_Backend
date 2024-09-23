@@ -1,6 +1,6 @@
-import axios from 'axios';
-import { prismaClient } from '../clients/db';
-import JWTService from './jwt';
+import axios from "axios";
+import { prismaClient } from "../clients/db";
+import JWTService from "./jwt";
 
 interface GoogleTokenResult {
   iss?: string;
@@ -25,12 +25,15 @@ interface GoogleTokenResult {
 class UserService {
   public static async verifyGoogleAuthToken(token: string) {
     const googleToken = token;
-    const googleOauthURL = new URL('https://oauth2.googleapis.com/tokeninfo');
-    googleOauthURL.searchParams.set('id_token', googleToken);
+    const googleOauthURL = new URL("https://oauth2.googleapis.com/tokeninfo");
+    googleOauthURL.searchParams.set("id_token", googleToken);
 
-    const { data } = await axios.get<GoogleTokenResult>(googleOauthURL.toString(), {
-      responseType: 'json',
-    });
+    const { data } = await axios.get<GoogleTokenResult>(
+      googleOauthURL.toString(),
+      {
+        responseType: "json",
+      }
+    );
 
     const user = await prismaClient.user.findUnique({
       where: { email: data.email },
@@ -51,7 +54,7 @@ class UserService {
       where: { email: data.email },
     });
 
-    if (!userInDb) throw new Error('User with email not found');
+    if (!userInDb) throw new Error("User with email not found");
 
     const userToken = JWTService.generateTokenForUser(userInDb);
 
@@ -60,6 +63,21 @@ class UserService {
 
   public static getUserById(id: string) {
     return prismaClient.user.findUnique({ where: { id } });
+  }
+
+  public static followUser(from: string, to: string) {
+    return prismaClient.follows.create({
+      data: {
+        follower: { connect: { id: from } },
+        following: { connect: { id: to } },
+      },
+    });
+  }
+
+  public static unfollowUser(from: string, to: string) {
+    return prismaClient.follows.delete({
+      where: { followerId_followingId: { followerId: from, followingId: to } },
+    });
   }
 }
 
