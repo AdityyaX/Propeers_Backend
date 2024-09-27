@@ -1,10 +1,10 @@
-import axios from "axios";
-import { prismaClient } from "../../clients/db";
-import JWTService from "../../services/jwt";
-import { GraphqlContext } from "../../intefaces";
-import { User } from "@prisma/client";
-import UserService from "../../services/user";
-import { redisClient } from "../../clients/redis";
+import axios from 'axios';
+import { prismaClient } from '../../clients/db';
+import JWTService from '../../services/jwt';
+import { GraphqlContext } from '../../intefaces';
+import { User } from '@prisma/client';
+import UserService from '../../services/user';
+import { redisClient } from '../../clients/redis';
 
 const queries = {
   verifyGoogleToken: async (parent: any, { token }: { token: string }) => {
@@ -18,17 +18,13 @@ const queries = {
     const user = await UserService.getUserById(id);
     return user;
   },
-  getUserById: async (
-    parent: any,
-    { id }: { id: string },
-    ctx: GraphqlContext
-  ) => UserService.getUserById(id),
+  getUserById: async (parent: any, { id }: { id: string }, ctx: GraphqlContext) =>
+    UserService.getUserById(id),
 };
 
 const extraResolvers = {
   User: {
-    tweets: (parent: User) =>
-      prismaClient.tweet.findMany({ where: { author: { id: parent.id } } }),
+    tweets: (parent: User) => prismaClient.tweet.findMany({ where: { author: { id: parent.id } } }),
     followers: async (parent: User) => {
       const result = await prismaClient.follows.findMany({
         where: { following: { id: parent.id } },
@@ -49,12 +45,10 @@ const extraResolvers = {
     },
     recommendedUsers: async (parent: User, _: any, ctx: GraphqlContext) => {
       if (!ctx.user) return [];
-      const cachedValue = await redisClient.get(
-        `RECOMMENDED_USERS:${ctx.user.id}`
-      );
+      const cachedValue = await redisClient.get(`RECOMMENDED_USERS:${ctx.user.id}`);
 
       if (cachedValue) {
-        console.log("Cache Found");
+        console.log('Cache Found');
         return JSON.parse(cachedValue);
       }
 
@@ -75,20 +69,16 @@ const extraResolvers = {
         for (const followingOfFollowedUser of followings.following.followers) {
           if (
             followingOfFollowedUser.following.id !== ctx.user.id &&
-            myFollowings.findIndex(
-              (e) => e?.followingId === followingOfFollowedUser.following.id
-            ) < 0
+            myFollowings.findIndex((e) => e?.followingId === followingOfFollowedUser.following.id) <
+              0
           ) {
             users.push(followingOfFollowedUser.following);
           }
         }
       }
 
-      console.log("Cache Not Found");
-      await redisClient.set(
-        `RECOMMENDED_USERS:${ctx.user.id}`,
-        JSON.stringify(users)
-      );
+      console.log('Cache Not Found');
+      await redisClient.set(`RECOMMENDED_USERS:${ctx.user.id}`, JSON.stringify(users));
 
       return users;
     },
@@ -96,23 +86,15 @@ const extraResolvers = {
 };
 
 const mutations = {
-  followUser: async (
-    parent: any,
-    { to }: { to: string },
-    ctx: GraphqlContext
-  ) => {
-    if (!ctx.user || !ctx.user.id) throw new Error("unauthenticated");
+  followUser: async (parent: any, { to }: { to: string }, ctx: GraphqlContext) => {
+    if (!ctx.user || !ctx.user.id) throw new Error('unauthenticated');
 
     await UserService.followUser(ctx.user.id, to);
     await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`);
     return true;
   },
-  unfollowUser: async (
-    parent: any,
-    { to }: { to: string },
-    ctx: GraphqlContext
-  ) => {
-    if (!ctx.user || !ctx.user.id) throw new Error("unauthenticated");
+  unfollowUser: async (parent: any, { to }: { to: string }, ctx: GraphqlContext) => {
+    if (!ctx.user || !ctx.user.id) throw new Error('unauthenticated');
     await UserService.unfollowUser(ctx.user.id, to);
     await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`);
     return true;

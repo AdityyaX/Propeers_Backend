@@ -50,6 +50,7 @@ export async function initServer() {
   });
 
   await graphqlServer.start();
+app.get('/', (req, res) => res.status(200).json({ message: 'Everything is good' }));
 
   app.use(
     "/graphql",
